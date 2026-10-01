@@ -74,7 +74,11 @@ async def async_setup_entry(
                 description = VictronEntityDescription(
                     key=register_name,
                     name=register_name.replace("_", " "),
-                    native_unit_of_measurement=registerInfo.unit,
+                    native_unit_of_measurement=(
+                        registerInfo.unit
+                        if isinstance(registerInfo.unit, str)
+                        else None
+                    ),
                     state_class=registerInfo.determine_stateclass(),
                     slave=slave,
                     device_class=determine_victron_device_class(
@@ -181,7 +185,13 @@ class VictronSensor(CoordinatorEntity, SensorEntity):
                 if self.entity_type is not None and isinstance(
                     self.entity_type, TextReadEntityType
                 ):
-                    if data in {item.value for item in self.entity_type.decodeEnum}:
+                    if data in (65535, 65535.0):
+                        self._attr_native_value = None
+                        _LOGGER.debug(
+                            "Value 0xFFFF received for entity %s, treating as unavailable",
+                            self._attr_name,
+                        )
+                    elif data in {item.value for item in self.entity_type.decodeEnum}:
                         self._attr_native_value = self.entity_type.decodeEnum(
                             data
                         ).name.split("_DUPLICATE")[0]
