@@ -102,15 +102,7 @@ async def async_setup_entry(
     entity = {}
     for description in descriptions:
         entity = description
-        try:
-            entities.append(VictronNumber(victron_coordinator, entity))
-        except KeyError:
-            _LOGGER.warning(
-                "Skipping number entity '%s' for unit %s: the unit returned no data "
-                "for this register. Other entities are unaffected",
-                description.key,
-                description.slave,
-            )
+        entities.append(VictronNumber(victron_coordinator, entity))
     _LOGGER.debug("adding number")
     async_add_entities(entities)
     _LOGGER.debug("adding numbering")
@@ -237,11 +229,23 @@ class VictronNumber(NumberEntity):
 
         self.data_key = str(self.description.slave) + "." + str(self.description.key)
 
-        self._attr_native_value = self.description.value_fn(
-            self.coordinator.processed_data(),
-            self.description.slave,
-            self.description.key,
-        )
+        try:
+            self._attr_native_value = self.description.value_fn(
+                self.coordinator.processed_data(),
+                self.description.slave,
+                self.description.key,
+            )
+        except KeyError:
+            # The unit returned no data for this register at startup. Initialize
+            # as unavailable; native_value recovers automatically once the
+            # coordinator receives data for this register.
+            _LOGGER.debug(
+                "No startup data for number entity '%s' on unit %s; "
+                "initializing as unavailable",
+                self.description.key,
+                self.description.slave,
+            )
+            self._attr_native_value = None
 
         self._attr_unique_id = f"{self.description.slave}_{self.description.key}"
         if self.description.slave not in (100, 225):
