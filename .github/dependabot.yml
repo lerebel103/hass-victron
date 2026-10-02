@@ -1,0 +1,39 @@
+---
+version: 2
+updates:
+  # GitHub Actions used across the workflows in .github/workflows/
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "ci"
+      - "dependencies"
+    groups:
+      # Group routine version bumps into one PR to reduce noise.
+      actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+  # Python dependencies. Note: the integration's runtime requirement
+  # (pymodbus) lives in custom_components/victron/manifest.json, which
+  # Dependabot's pip ecosystem does not parse. This updater tracks the
+  # build-system pin (setuptools) in pyproject.toml.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+    labels:
+      - "dependencies"
+    groups:
+      python-deps:
+        applies-to: version-updates
+        patterns:
+          - "*"
